@@ -21,14 +21,45 @@ interface ReactionConditions {
 const SOLVENT_SMILES: Record<string, string> = {
   water: "O",
   ethanol: "CCO",
-  acetone: "CC(C)=O",
-  dmso: "CS(=O)C",
   methanol: "CO",
-  toluene: "Cc1ccccc1",
+  isopropanol: "CC(O)C",
+  acetone: "CC(C)=O",
   acetonitrile: "CC#N",
+  dmso: "CS(=O)C",
+  dmf: "CN(C)C=O",
+  toluene: "Cc1ccccc1",
+  benzene: "c1ccccc1",
+  xylene: "Cc1cccc(C)c1",
   dichloromethane: "ClCCl",
+  chloroform: "ClC(Cl)Cl",
   ether: "CCOCC",
+  thf: "C1CCOC1",
+  hexane: "CCCCCC",
+  heptane: "CCCCCCC",
+  dioxane: "O1CCOCC1",
 };
+
+const COMMON_REACTANTS: Array<{ label: string; smiles: string }> = [
+  { label: "Ethanol", smiles: "CCO" },
+  { label: "Acetic Acid", smiles: "CC(=O)O" },
+  { label: "Acetaldehyde", smiles: "CC=O" },
+  { label: "Benzene", smiles: "c1ccccc1" },
+  { label: "Toluene", smiles: "Cc1ccccc1" },
+  { label: "Aniline", smiles: "Nc1ccccc1" },
+  { label: "Phenol", smiles: "Oc1ccccc1" },
+  { label: "Methane", smiles: "C" },
+  { label: "Propene", smiles: "C=CC" },
+  { label: "Chloroform", smiles: "ClC(Cl)Cl" },
+];
+
+const COMMON_SOLUTES: Array<{ label: string; smiles: string }> = [
+  { label: "Sodium Chloride", smiles: "[Na+].[Cl-]" },
+  { label: "Sodium Hydroxide", smiles: "[Na+].[OH-]" },
+  { label: "Hydrochloric Acid", smiles: "Cl" },
+  { label: "Sulfuric Acid", smiles: "O=S(=O)(O)O" },
+  { label: "Potassium Carbonate", smiles: "[K+].[K+].[O-]C(=O)[O-]" },
+  { label: "Lithium Aluminum Hydride", smiles: "[Li+].[AlH4-]" },
+];
 
 export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
@@ -47,7 +78,7 @@ export function ReactionSimulator() {
     return cleaned.slice(0, 200);
   };
 
-  // helpers to manage dynamic fields
+  // handlers to manage dynamic fields
   const updateReactant = (idx: number, value: string) => {
     const next = [...reactants];
     next[idx] = sanitizeSmiles(value);
@@ -65,6 +96,15 @@ export function ReactionSimulator() {
   const addSolute = () => setSolutes((s) => [...s, ""]);
   const removeSolute = (idx: number) =>
     setSolutes((s) => s.filter((_, i) => i !== idx));
+
+  const addReactantFromLibrary = (smiles: string) => {
+    setReactants((r) => [...r, smiles]);
+    toast.success("Reactant added from library");
+  };
+  const addSoluteFromLibrary = (smiles: string) => {
+    setSolutes((s) => [...s, smiles]);
+    toast.success("Solute added from library");
+  };
 
   // Derived SMILES for solvent and solution previews
   const solventSmiles = SOLVENT_SMILES[conditions.solvent] ?? "O";
@@ -134,10 +174,24 @@ export function ReactionSimulator() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label>Reactants (SMILES)</Label>
-                <Button variant="outline" size="sm" onClick={addReactant}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Reactant
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Select onValueChange={(v) => addReactantFromLibrary(v)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Add from library" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMMON_REACTANTS.map((c) => (
+                        <SelectItem key={c.smiles} value={c.smiles}>
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" onClick={addReactant}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Reactant
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
                 {reactants.map((val, idx) => (
@@ -175,12 +229,21 @@ export function ReactionSimulator() {
                 <SelectContent>
                   <SelectItem value="water">Water</SelectItem>
                   <SelectItem value="ethanol">Ethanol</SelectItem>
-                  <SelectItem value="acetone">Acetone</SelectItem>
-                  <SelectItem value="dmso">DMSO</SelectItem>
                   <SelectItem value="methanol">Methanol</SelectItem>
-                  <SelectItem value="toluene">Toluene</SelectItem>
+                  <SelectItem value="isopropanol">Isopropanol</SelectItem>
+                  <SelectItem value="acetone">Acetone</SelectItem>
                   <SelectItem value="acetonitrile">Acetonitrile</SelectItem>
+                  <SelectItem value="dmso">DMSO</SelectItem>
+                  <SelectItem value="dmf">DMF</SelectItem>
+                  <SelectItem value="thf">THF</SelectItem>
                   <SelectItem value="dichloromethane">DCM (CH2Cl2)</SelectItem>
+                  <SelectItem value="chloroform">Chloroform</SelectItem>
+                  <SelectItem value="benzene">Benzene</SelectItem>
+                  <SelectItem value="toluene">Toluene</SelectItem>
+                  <SelectItem value="xylene">Xylene</SelectItem>
+                  <SelectItem value="dioxane">1,4-Dioxane</SelectItem>
+                  <SelectItem value="hexane">Hexane</SelectItem>
+                  <SelectItem value="heptane">Heptane</SelectItem>
                   <SelectItem value="ether">Diethyl Ether</SelectItem>
                 </SelectContent>
               </Select>
@@ -191,10 +254,24 @@ export function ReactionSimulator() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label>Solutes (optional, SMILES)</Label>
-              <Button variant="outline" size="sm" onClick={addSolute}>
-                <Plus className="h-4 w-4 mr-1" />
-                Add Solute
-              </Button>
+              <div className="flex items-center gap-2">
+                <Select onValueChange={(v) => addSoluteFromLibrary(v)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Add from library" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COMMON_SOLUTES.map((c) => (
+                      <SelectItem key={c.smiles} value={c.smiles}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" size="sm" onClick={addSolute}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Solute
+                </Button>
+              </div>
             </div>
             {solutes.length > 0 && (
               <div className="space-y-2">
