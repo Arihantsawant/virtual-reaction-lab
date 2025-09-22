@@ -17,6 +17,13 @@ interface ReactionConditions {
   solvent: string;
 }
 
+const SOLVENT_SMILES: Record<string, string> = {
+  water: "O",
+  ethanol: "CCO",
+  acetone: "CC(C)=O",
+  dmso: "CS(=O)C",
+};
+
 export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
   const [products, setProducts] = useState<string[]>([]);
@@ -26,6 +33,18 @@ export function ReactionSimulator() {
     solvent: "water"
   });
   const [isSimulating, setIsSimulating] = useState(false);
+
+  const sanitizeSmiles = (input: string) => {
+    const allowed = /[A-Za-z0-9@+\-\[\]\(\)=#\\/\.]/g;
+    const cleaned = (input.match(allowed) || []).join("");
+    return cleaned.slice(0, 200);
+  };
+
+  // Derived SMILES for solvent and solution previews
+  const solventSmiles = SOLVENT_SMILES[conditions.solvent] ?? "O";
+  const solutionSeedBefore = `${reactants[0] || ""}+${solventSmiles}`;
+  const solutionSeedAfter =
+    products.length > 0 ? `${products.join(".")}+${solventSmiles}` : solutionSeedBefore;
 
   const handleSimulate = async () => {
     setIsSimulating(true);
@@ -61,7 +80,7 @@ export function ReactionSimulator() {
               <Input
                 placeholder="Enter SMILES notation (e.g., CCO)"
                 value={reactants[0] || ""}
-                onChange={(e) => setReactants([e.target.value])}
+                onChange={(e) => setReactants([sanitizeSmiles(e.target.value)])}
               />
             </div>
             <div className="space-y-4">
@@ -120,7 +139,7 @@ export function ReactionSimulator() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Reactants</h3>
-          <MoleculeViewer smiles={reactants[0]} height={200} />
+          <MoleculeViewer smiles={reactants[0]} height={220} />
         </div>
         
         <div className="flex items-center justify-center">
@@ -135,12 +154,24 @@ export function ReactionSimulator() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Products</h3>
           {products.length > 0 ? (
-            <MoleculeViewer smiles={products[0]} height={200} />
+            <MoleculeViewer smiles={products[0]} height={220} />
           ) : (
-            <Card className="p-8 h-[200px] flex items-center justify-center">
+            <Card className="p-8 h-[220px] flex items-center justify-center">
               <p className="text-muted-foreground">Run simulation to see products</p>
             </Card>
           )}
+        </div>
+      </div>
+
+      {/* Additional 3D Views: Solvent & Solution */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Solvent</h3>
+          <MoleculeViewer smiles={solventSmiles} height={220} />
+        </div>
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Solution</h3>
+          <MoleculeViewer smiles={products.length > 0 ? solutionSeedAfter : solutionSeedBefore} height={220} />
         </div>
       </div>
 
