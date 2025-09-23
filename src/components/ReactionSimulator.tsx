@@ -102,6 +102,9 @@ export function ReactionSimulator() {
   });
   const [isSimulating, setIsSimulating] = useState(false);
   const resolveCompound = useAction(api.pubchem.resolveCompound);
+  // Add: FastAPI cheminformatics actions
+  const validateStructureFastApi = useAction(api.cheminfo.validateStructure);
+  const normalizeSmilesFastApi = useAction(api.cheminfo.normalizeSmiles);
 
   const sanitizeSmiles = (input: string) => {
     const allowed = /[A-Za-z0-9@\+\-\[\]\(\)=#\\\/\.\*:]/g;
@@ -200,6 +203,77 @@ export function ReactionSimulator() {
       }
     } catch (e) {
       toast.error("Validation failed (PubChem). Please try again.");
+    }
+  };
+
+  // Add: Validate reactants via FastAPI Cheminformatics
+  const handleValidateViaCheminfo = async () => {
+    try {
+      const checks = await Promise.all(
+        reactants.map(async (r, i) => {
+          const q = r.trim();
+          if (!q) return { i, status: "empty" as const };
+          const res = await validateStructureFastApi({ structure: q });
+          return {
+            i,
+            status: res.isValid ? ("valid" as const) : ("invalid" as const),
+            msg: res.message,
+          };
+        }),
+      );
+      const invalid = checks.filter((c) => c.status === "invalid");
+      if (invalid.length === 0) {
+        toast.success("All reactants valid (FastAPI).");
+      } else {
+        toast.error(
+          `Invalid reactants: ${invalid
+            .map((c) => `R${c.i + 1}${c.msg ? ` (${c.msg})` : ""}`)
+            .join(", ")}`,
+        );
+      }
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("FASTAPI_CHEM_BASE_URL")) {
+        toast.error(
+          "FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.",
+        );
+      } else {
+        toast.error("FastAPI validation failed.");
+      }
+    }
+  };
+
+  // Add: Normalize all SMILES via FastAPI Cheminformatics
+  const handleNormalizeViaCheminfo = async () => {
+    try {
+      const reactantResults = await Promise.all(
+        reactants.map(async (r) => {
+          const q = r.trim();
+          if (!q) return r;
+          const res = await normalizeSmilesFastApi({ smiles: q });
+          return res?.canonicalSmiles || r;
+        }),
+      );
+      const soluteResults = await Promise.all(
+        solutes.map(async (s) => {
+          const q = s.trim();
+          if (!q) return s;
+          const res = await normalizeSmilesFastApi({ smiles: q });
+          return res?.canonicalSmiles || s;
+        }),
+      );
+      setReactants(reactantResults);
+      setSolutes(soluteResults);
+      toast.success("Normalized via FastAPI Cheminformatics.");
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (msg.includes("FASTAPI_CHEM_BASE_URL")) {
+        toast.error(
+          "FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.",
+        );
+      } else {
+        toast.error("SMILES normalization failed (FastAPI).");
+      }
     }
   };
 
@@ -541,6 +615,12 @@ export function ReactionSimulator() {
         </Button>
         <Button variant="outline" onClick={handleValidateViaPubChem}>
           Validate via PubChem
+        </Button>
+        <Button variant="outline" onClick={handleValidateViaCheminfo}>
+          Cheminfo: Validate
+        </Button>
+        <Button variant="outline" onClick={handleNormalizeViaCheminfo}>
+          Cheminfo: Normalize
         </Button>
         <Button variant="outline" onClick={handleSaveReaction} disabled={products.length === 0}>
           <Save className="mr-2 h-4 w-4" />

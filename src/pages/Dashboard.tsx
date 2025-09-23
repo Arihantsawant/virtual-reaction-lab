@@ -6,10 +6,33 @@ import { motion } from "framer-motion";
 import { Beaker, FileText, History, LogOut, FlaskConical, Plus, Settings, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { ReactionSimulator } from "@/components/ReactionSimulator";
+import { useEffect, useState } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [showFastApiWarning, setShowFastApiWarning] = useState(false);
+  const validateStructure = useAction(api.cheminfo.validateStructure);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        // Lightweight ping to detect missing env; safe no-op if configured
+        await validateStructure({ structure: "CCO" });
+      } catch (e: any) {
+        const msg = String(e?.message || e);
+        if (msg.includes("FASTAPI_CHEM_BASE_URL is not set") && active) {
+          setShowFastApiWarning(true);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [validateStructure]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -17,7 +40,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
       {/* Header */}
       <header className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -46,6 +69,27 @@ export default function Dashboard() {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {showFastApiWarning && (
+          <Card className="mb-6 border-destructive/50 bg-destructive/10">
+            <CardContent className="py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-semibold">FastAPI Cheminformatics setup required</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Set FASTAPI_CHEM_BASE_URL (and optional FASTAPI_CHEM_API_KEY) in Integrations to enable validation, normalization, descriptors, and product prediction.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFastApiWarning(false)}
+                  className="shrink-0"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -217,6 +261,6 @@ export default function Dashboard() {
           </Tabs>
         </motion.div>
       </div>
-    </div>
+    </>
   );
 }
