@@ -6,35 +6,18 @@ import { motion } from "framer-motion";
 type Props = {
   products: string[];
   solventSmiles: string;
+  scoreFromSeed: (seed: string, salt: string) => number;
 };
 
-// Deterministic pseudo-scores from a seed string
-function scoreFromSeed(seed: string, salt: string) {
-  let h = 2166136261 >>> 0;
-  const s = seed + "|" + salt;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  // map to 5..95 for nicer percentages
-  return 5 + (h >>> 0) % 91;
-}
-
-export function SafetyApplicationsPanel({ products, solventSmiles }: Props) {
+export function SafetyApplicationsPanel({ products, solventSmiles, scoreFromSeed }: Props) {
   if (products.length === 0) return null;
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
       <Card>
         <CardHeader>
           <CardTitle>Safety, Environmental Impact & Applications</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Percent metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               { label: "Acute Toxicity", key: "tox" },
@@ -44,10 +27,7 @@ export function SafetyApplicationsPanel({ products, solventSmiles }: Props) {
               { label: "Exposure Risk", key: "exp" },
               { label: "Corrosivity", key: "corr" },
             ].map((m) => {
-              const val = scoreFromSeed(
-                products.join(".") + "|" + solventSmiles,
-                m.key
-              );
+              const val = scoreFromSeed(products.join(".") + "|" + solventSmiles, m.key);
               return (
                 <div key={m.key} className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
@@ -62,7 +42,6 @@ export function SafetyApplicationsPanel({ products, solventSmiles }: Props) {
 
           <Separator />
 
-          {/* Regulatory snapshot */}
           <div className="space-y-2">
             <h4 className="font-medium">Regulatory Compliance Snapshot</h4>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -89,7 +68,6 @@ export function SafetyApplicationsPanel({ products, solventSmiles }: Props) {
 
           <Separator />
 
-          {/* Applications */}
           <div className="space-y-3">
             <h4 className="font-medium">Potential Applications</h4>
             <ul className="list-disc pl-6 text-sm space-y-1">

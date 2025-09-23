@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Minus, Thermometer } from "lucide-react";
+import { Minus, Plus, Thermometer, Zap } from "lucide-react";
 import { MoleculeViewer } from "@/components/MoleculeViewer";
 
 export type ReactionConditions = {
@@ -13,54 +13,56 @@ export type ReactionConditions = {
   solvent: string;
 };
 
-export type LibraryItem = { label: string; smiles: string };
+type LibraryItem = { label: string; smiles: string };
 
-type ReactionInputsProps = {
+type Props = {
   reactants: string[];
   solutes: string[];
   conditions: ReactionConditions;
-  commonReactants: LibraryItem[];
-  commonSolutes: LibraryItem[];
-  solventSmilesMap: Record<string, string>;
-  onAddReactant: () => void;
-  onRemoveReactant: (idx: number) => void;
-  onUpdateReactant: (idx: number, value: string) => void;
-  onAddReactantFromLibrary: (smiles: string) => void;
-  onAddSolute: () => void;
-  onRemoveSolute: (idx: number) => void;
-  onUpdateSolute: (idx: number, value: string) => void;
-  onAddSoluteFromLibrary: (smiles: string) => void;
-  onChangeSolvent: (value: string) => void;
-  onChangeTemperature: (value: number) => void;
-  onChangePressure: (value: number) => void;
-  estimatedText: string;
+
+  updateReactant: (idx: number, value: string) => void;
+  addReactant: () => void;
+  removeReactant: (idx: number) => void;
+  addReactantFromLibrary: (smiles: string) => void;
+
+  updateSolute: (idx: number, value: string) => void;
+  addSolute: () => void;
+  removeSolute: (idx: number) => void;
+  addSoluteFromLibrary: (smiles: string) => void;
+
+  setSolvent: (solvent: string) => void;
+  setTemperature: (k: number) => void;
+  setPressure: (atm: number) => void;
+
+  commonReactants: Array<LibraryItem>;
+  commonSolutes: Array<LibraryItem>;
+  estimateText: string;
 };
 
-export function ReactionInputs(props: ReactionInputsProps) {
-  const {
-    reactants,
-    solutes,
-    conditions,
-    commonReactants,
-    commonSolutes,
-    onAddReactant,
-    onRemoveReactant,
-    onUpdateReactant,
-    onAddReactantFromLibrary,
-    onAddSolute,
-    onRemoveSolute,
-    onUpdateSolute,
-    onAddSoluteFromLibrary,
-    onChangeSolvent,
-    onChangeTemperature,
-    onChangePressure,
-    estimatedText,
-  } = props;
-
+export function ReactionInputs({
+  reactants,
+  solutes,
+  conditions,
+  updateReactant,
+  addReactant,
+  removeReactant,
+  addReactantFromLibrary,
+  updateSolute,
+  addSolute,
+  removeSolute,
+  addSoluteFromLibrary,
+  setSolvent,
+  setTemperature,
+  setPressure,
+  commonReactants,
+  commonSolutes,
+  estimateText,
+}: Props) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
+          <Zap className="h-5 w-5" />
           Reaction Setup
         </CardTitle>
       </CardHeader>
@@ -71,7 +73,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
             <div className="flex items-center justify-between">
               <Label>Reactants (SMILES)</Label>
               <div className="flex items-center gap-2">
-                <Select onValueChange={(v) => onAddReactantFromLibrary(v)}>
+                <Select onValueChange={(v) => addReactantFromLibrary(v)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Add from library" />
                   </SelectTrigger>
@@ -83,24 +85,25 @@ export function ReactionInputs(props: ReactionInputsProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" onClick={onAddReactant}>
+                <Button variant="outline" size="sm" onClick={addReactant}>
                   <Plus className="h-4 w-4 mr-1" />
                   Add Reactant
                 </Button>
               </div>
             </div>
+
             <div className="space-y-2">
               {reactants.map((val, idx) => (
                 <div key={idx} className="flex items-center gap-2">
                   <Input
                     placeholder="Enter SMILES (e.g., CCO)"
                     value={val}
-                    onChange={(e) => onUpdateReactant(idx, e.target.value)}
+                    onChange={(e) => updateReactant(idx, e.target.value)}
                   />
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => onRemoveReactant(idx)}
+                    onClick={() => removeReactant(idx)}
                     disabled={reactants.length === 1}
                     title="Remove reactant"
                   >
@@ -110,7 +113,6 @@ export function ReactionInputs(props: ReactionInputsProps) {
               ))}
             </div>
 
-            {/* Live 3D previews for non-empty reactants */}
             {reactants.filter((r) => r.trim()).length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">Reactant Structures</Label>
@@ -127,10 +129,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
 
           <div className="space-y-4">
             <Label>Solvent</Label>
-            <Select
-              value={conditions.solvent}
-              onValueChange={(value) => onChangeSolvent(value)}
-            >
+            <Select value={conditions.solvent} onValueChange={(value) => setSolvent(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -163,7 +162,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
           <div className="flex items-center justify-between">
             <Label>Solutes (optional, SMILES)</Label>
             <div className="flex items-center gap-2">
-              <Select onValueChange={(v) => onAddSoluteFromLibrary(v)}>
+              <Select onValueChange={(v) => addSoluteFromLibrary(v)}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Add from library" />
                 </SelectTrigger>
@@ -175,7 +174,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="sm" onClick={onAddSolute}>
+              <Button variant="outline" size="sm" onClick={addSolute}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Solute
               </Button>
@@ -188,12 +187,12 @@ export function ReactionInputs(props: ReactionInputsProps) {
                   <Input
                     placeholder="Enter solute SMILES"
                     value={val}
-                    onChange={(e) => onUpdateSolute(idx, e.target.value)}
+                    onChange={(e) => updateSolute(idx, e.target.value)}
                   />
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => onRemoveSolute(idx)}
+                    onClick={() => removeSolute(idx)}
                     title="Remove solute"
                   >
                     <Minus className="h-4 w-4" />
@@ -213,7 +212,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
             </Label>
             <Slider
               value={[conditions.temperature]}
-              onValueChange={([value]) => onChangeTemperature(value)}
+              onValueChange={([value]) => setTemperature(value)}
               min={273}
               max={573}
               step={1}
@@ -224,7 +223,7 @@ export function ReactionInputs(props: ReactionInputsProps) {
             <Label>Pressure: {conditions.pressure} atm</Label>
             <Slider
               value={[conditions.pressure]}
-              onValueChange={([value]) => onChangePressure(value)}
+              onValueChange={([value]) => setPressure(value)}
               min={0.1}
               max={10}
               step={0.1}
@@ -233,9 +232,9 @@ export function ReactionInputs(props: ReactionInputsProps) {
           </div>
         </div>
 
-        {/* Estimated time */}
+        {/* Estimate */}
         <div className="text-sm text-muted-foreground">
-          Estimated real-world completion time: <span className="font-medium">{estimatedText}</span>
+          Estimated real-world completion time: <span className="font-medium">{estimateText}</span>
         </div>
       </CardContent>
     </Card>

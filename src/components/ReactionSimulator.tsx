@@ -6,18 +6,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
-import { ArrowRight, Play, Save, Zap, Plus, Minus } from "lucide-react";
+import { ArrowRight, Play, Save, Thermometer, Zap, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { MoleculeViewer } from "./MoleculeViewer";
 import { Progress } from "@/components/ui/progress";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ReactionInputs, ReactionConditions, LibraryItem } from "@/components/reaction/ReactionInputs";
-import { Visualization } from "@/components/reaction/Visualization";
-import { SafetyPanel } from "@/components/reaction/SafetyPanel";
+import { ReactionInputs } from "@/components/reaction/ReactionInputs";
+import { MoleculeVisualization } from "@/components/reaction/MoleculeVisualization";
+import { SafetyApplicationsPanel } from "@/components/reaction/SafetyApplicationsPanel";
+import { ReactionControls } from "@/components/reaction/ReactionControls";
 
-/* Using imported ReactionConditions type from "@/components/reaction/ReactionInputs" */
+interface ReactionConditions {
+  temperature: number;
+  pressure: number;
+  solvent: string;
+}
 
 const SOLVENT_SMILES: Record<string, string> = {
   // Show explicit hydrogens for water so the viewer renders H–O–H
@@ -344,61 +349,50 @@ export function ReactionSimulator() {
 
   return (
     <div className="space-y-8">
-      {/* Inputs extracted */}
+      {/* Reaction Input */}
       <ReactionInputs
         reactants={reactants}
         solutes={solutes}
         conditions={conditions}
-        commonReactants={COMMON_REACTANTS as Array<LibraryItem>}
-        commonSolutes={COMMON_SOLUTES as Array<LibraryItem>}
-        solventSmilesMap={SOLVENT_SMILES}
-        onAddReactant={addReactant}
-        onRemoveReactant={removeReactant}
-        onUpdateReactant={updateReactant}
-        onAddReactantFromLibrary={addReactantFromLibrary}
-        onAddSolute={addSolute}
-        onRemoveSolute={removeSolute}
-        onUpdateSolute={updateSolute}
-        onAddSoluteFromLibrary={addSoluteFromLibrary}
-        onChangeSolvent={(value) => setConditions((prev) => ({ ...prev, solvent: value }))}
-        onChangeTemperature={(value) => setConditions((prev) => ({ ...prev, temperature: value }))}
-        onChangePressure={(value) => setConditions((prev) => ({ ...prev, pressure: value }))}
-        estimatedText={estimateText}
+        updateReactant={updateReactant}
+        addReactant={addReactant}
+        removeReactant={removeReactant}
+        addReactantFromLibrary={addReactantFromLibrary}
+        updateSolute={updateSolute}
+        addSolute={addSolute}
+        removeSolute={removeSolute}
+        addSoluteFromLibrary={addSoluteFromLibrary}
+        setSolvent={(solvent) => setConditions((p) => ({ ...p, solvent }))}
+        setTemperature={(k) => setConditions((p) => ({ ...p, temperature: k }))}
+        setPressure={(atm) => setConditions((p) => ({ ...p, pressure: atm }))}
+        commonReactants={COMMON_REACTANTS}
+        commonSolutes={COMMON_SOLUTES}
+        estimateText={estimateText}
       />
 
-      {/* Visualization extracted */}
-      <Visualization
-        primaryReactant={reactants.filter(Boolean)[0] || "CCO"}
+      {/* Molecular Visualization */}
+      <MoleculeVisualization
+        reactants={reactants}
         products={products}
         byproducts={byproducts}
         solventSmiles={solventSmiles}
-        solutionSeedBefore={solutionSeedBefore}
         solutionSeedAfter={solutionSeedAfter}
       />
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-        <Button onClick={handleSimulate} disabled={!canRun} className="flex-1">
-          <Play className="mr-2 h-4 w-4" />
-          {isSimulating ? "Simulating..." : "Run Simulation"}
-        </Button>
-        <Button variant="outline" onClick={handleValidateViaPubChem}>
-          Validate via PubChem
-        </Button>
-        <Button variant="outline" onClick={handleValidateViaCheminfo}>
-          Cheminfo: Validate
-        </Button>
-        <Button variant="outline" onClick={handleNormalizeViaCheminfo}>
-          Cheminfo: Normalize
-        </Button>
-        <Button variant="outline" onClick={handleSaveReaction} disabled={products.length === 0}>
-          <Save className="mr-2 h-4 w-4" />
-          Save Reaction
-        </Button>
-      </div>
+      <ReactionControls
+        isSimulating={isSimulating}
+        canRun={canRun}
+        hasProducts={products.length > 0}
+        onSimulate={handleSimulate}
+        onValidatePubChem={handleValidateViaPubChem}
+        onValidateCheminfo={handleValidateViaCheminfo}
+        onNormalizeCheminfo={handleNormalizeViaCheminfo}
+        onSave={handleSaveReaction}
+      />
 
-      {/* Safety panel extracted */}
-      <SafetyPanel
+      {/* Detailed Safety & Compliance + Applications */}
+      <SafetyApplicationsPanel
         products={products}
         solventSmiles={solventSmiles}
         scoreFromSeed={scoreFromSeed}
