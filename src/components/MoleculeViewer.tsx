@@ -7,6 +7,8 @@ interface MoleculeViewerProps {
   width?: number;
   height?: number;
   className?: string;
+  // Add: control caption display
+  captionMode?: "smiles" | "formula";
 }
 
 // Add: element color palette and simple SMILES parsing utilities
@@ -176,6 +178,7 @@ export function MoleculeViewer({
   width = 400,
   height = 300,
   className = "",
+  captionMode = "smiles", // Add: default caption mode
 }: MoleculeViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -367,6 +370,12 @@ export function MoleculeViewer({
     };
   }, [smiles, width, height]);
 
+  // Add: compute formula for caption if needed
+  const captionFormula = (() => {
+    const els = parseElementsFromSmiles(smiles);
+    return computeFormula(els);
+  })();
+
   return (
     <Card className={`p-3 ${className}`}>
       <div
@@ -376,7 +385,9 @@ export function MoleculeViewer({
         title="Drag to rotate • Scroll to zoom"
       />
       <div className="mt-2 text-center space-y-1">
-        <p className="text-xs text-muted-foreground font-mono">{smiles}</p>
+        <p className="text-xs text-muted-foreground font-mono">
+          {captionMode === "formula" ? (captionFormula || "—") : smiles}
+        </p>
         {/* Atom legend and formula */}
         <MoleculeLegend smiles={smiles} />
       </div>

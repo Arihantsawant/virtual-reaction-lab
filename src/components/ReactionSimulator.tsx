@@ -337,7 +337,7 @@ export function ReactionSimulator() {
                     {reactants
                       .filter((r) => r.trim())
                       .map((r, i) => (
-                        <MoleculeViewer key={`${r}-${i}`} smiles={r} height={160} />
+                        <MoleculeViewer key={`${r}-${i}`} smiles={r} height={160} captionMode="formula" />
                       ))}
                   </div>
                 </div>
@@ -470,7 +470,7 @@ export function ReactionSimulator() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Reactants</h3>
           {/* Show first as primary preview to keep layout compact */}
-          <MoleculeViewer smiles={reactants.filter(Boolean)[0] || "CCO"} height={220} />
+          <MoleculeViewer smiles={reactants.filter(Boolean)[0] || "CCO"} height={220} captionMode="formula" />
         </div>
 
         <div className="flex items-center justify-center">
