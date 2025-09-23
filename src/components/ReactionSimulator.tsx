@@ -17,11 +17,7 @@ import { ReactionInputs, ReactionConditions, LibraryItem } from "@/components/re
 import { Visualization } from "@/components/reaction/Visualization";
 import { SafetyPanel } from "@/components/reaction/SafetyPanel";
 
-interface ReactionConditions {
-  temperature: number;
-  pressure: number;
-  solvent: string;
-}
+/* Using imported ReactionConditions type from "@/components/reaction/ReactionInputs" */
 
 const SOLVENT_SMILES: Record<string, string> = {
   // Show explicit hydrogens for water so the viewer renders H–O–H
