@@ -74,51 +74,44 @@ export const resolveCompound = action({
   },
 });
 
-// Add: fetch synonyms for a given identifier (name | smiles | cid)
+// Add: Fetch compound synonyms by identifier and namespace (name | smiles | cid)
 export const getSynonyms = action({
   args: {
     identifier: v.string(),
     namespace: v.union(v.literal("name"), v.literal("smiles"), v.literal("cid")),
   },
-  handler: async (ctx, args) => {
-    const { identifier, namespace } = args;
+  handler: async (ctx, { identifier, namespace }) => {
     const url = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/synonyms/JSON`;
     try {
       const r = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
       if (!r.ok) return [];
       const json = (await r.json()) as any;
-      const list = json?.InformationList?.Information?.[0]?.Synonym ?? [];
-      return Array.isArray(list) ? (list as string[]) : [];
+      const synonyms: string[] | undefined = json?.InformationList?.Information?.[0]?.Synonym;
+      if (Array.isArray(synonyms)) return synonyms;
+      // Fallback shape seen in some responses
+      if (Array.isArray(json?.InformationList?.Synonym)) return json.InformationList.Synonym as string[];
+      return [];
     } catch {
       return [];
     }
   },
 });
 
-// Add: return a direct PNG image URL (2D or 3D) for client-side fetching
+// Add: Return a direct PNG URL for a compound image (2D/3D)
 export const getImageUrl = action({
   args: {
     identifier: v.string(),
     namespace: v.union(v.literal("name"), v.literal("smiles"), v.literal("cid")),
     recordType: v.optional(v.union(v.literal("2d"), v.literal("3d"))),
-    imageSize: v.optional(v.string()), // e.g., "large", "small", or "320x240" (2D only)
+    imageSize: v.optional(v.string()), // e.g., "300x300"
   },
-  handler: async (ctx, args) => {
-    const { identifier, namespace, recordType, imageSize } = args;
-    let url = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/PNG`;
+  handler: async (ctx, { identifier, namespace, recordType, imageSize }) => {
+    const base = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/PNG`;
     const params = new URLSearchParams();
     if (recordType) params.set("record_type", recordType);
     if (imageSize) params.set("image_size", imageSize);
-    const full = params.toString() ? `${url}?${params.toString()}` : url;
-
-    // Optionally verify availability (light HEAD/GET check) but avoid heavy proxying.
-    try {
-      const r = await fetch(full, { method: "GET" });
-      if (!r.ok) return full; // Return anyway; client can fetch directly
-      // We return the URL for the client to fetch directly (no blobs/base64 here)
-      return full;
-    } catch {
-      return full;
-    }
+    const url = params.toString() ? `${base}?${params.toString()}` : base;
+    // Return the direct URL; client fetches it as an <img src=...>
+    return url;
   },
 });
