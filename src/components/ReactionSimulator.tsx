@@ -6,13 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { motion } from "framer-motion";
-import { ArrowRight, Play, Save, Thermometer, Zap, Plus, Minus } from "lucide-react";
+import { ArrowRight, Play, Save, Zap, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { MoleculeViewer } from "./MoleculeViewer";
 import { Progress } from "@/components/ui/progress";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { ReactionInputs, ReactionConditions, LibraryItem } from "@/components/reaction/ReactionInputs";
+import { Visualization } from "@/components/reaction/Visualization";
+import { SafetyPanel } from "@/components/reaction/SafetyPanel";
 
 interface ReactionConditions {
   temperature: number;
@@ -345,263 +348,37 @@ export function ReactionSimulator() {
 
   return (
     <div className="space-y-8">
-      {/* Reaction Input */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="h-5 w-5" />
-            Reaction Setup
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Reactants & Solvent */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Reactants (SMILES)</Label>
-                <div className="flex items-center gap-2">
-                  <Select onValueChange={(v) => addReactantFromLibrary(v)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Add from library" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COMMON_REACTANTS.map((c) => (
-                        <SelectItem key={c.smiles} value={c.smiles}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button variant="outline" size="sm" onClick={addReactant}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Reactant
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {reactants.map((val, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input
-                      placeholder="Enter SMILES (e.g., CCO)"
-                      value={val}
-                      onChange={(e) => updateReactant(idx, e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeReactant(idx)}
-                      disabled={reactants.length === 1}
-                      title="Remove reactant"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
+      {/* Inputs extracted */}
+      <ReactionInputs
+        reactants={reactants}
+        solutes={solutes}
+        conditions={conditions}
+        commonReactants={COMMON_REACTANTS as Array<LibraryItem>}
+        commonSolutes={COMMON_SOLUTES as Array<LibraryItem>}
+        solventSmilesMap={SOLVENT_SMILES}
+        onAddReactant={addReactant}
+        onRemoveReactant={removeReactant}
+        onUpdateReactant={updateReactant}
+        onAddReactantFromLibrary={addReactantFromLibrary}
+        onAddSolute={addSolute}
+        onRemoveSolute={removeSolute}
+        onUpdateSolute={updateSolute}
+        onAddSoluteFromLibrary={addSoluteFromLibrary}
+        onChangeSolvent={(value) => setConditions((prev) => ({ ...prev, solvent: value }))}
+        onChangeTemperature={(value) => setConditions((prev) => ({ ...prev, temperature: value }))}
+        onChangePressure={(value) => setConditions((prev) => ({ ...prev, pressure: value }))}
+        estimatedText={estimateText}
+      />
 
-              {/* Add: Live 3D previews for all non-empty reactants */}
-              {reactants.filter((r) => r.trim()).length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">Reactant Structures</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {reactants
-                      .filter((r) => r.trim())
-                      .map((r, i) => (
-                        <MoleculeViewer key={`${r}-${i}`} smiles={r} height={160} captionMode="formula" />
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <Label>Solvent</Label>
-              <Select
-                value={conditions.solvent}
-                onValueChange={(value) =>
-                  setConditions((prev) => ({ ...prev, solvent: value }))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="water">Water</SelectItem>
-                  <SelectItem value="ethanol">Ethanol</SelectItem>
-                  <SelectItem value="methanol">Methanol</SelectItem>
-                  <SelectItem value="isopropanol">Isopropanol</SelectItem>
-                  <SelectItem value="acetone">Acetone</SelectItem>
-                  <SelectItem value="acetonitrile">Acetonitrile</SelectItem>
-                  <SelectItem value="dmso">DMSO</SelectItem>
-                  <SelectItem value="dmf">DMF</SelectItem>
-                  <SelectItem value="thf">THF</SelectItem>
-                  <SelectItem value="dichloromethane">DCM (CH2Cl2)</SelectItem>
-                  <SelectItem value="chloroform">Chloroform</SelectItem>
-                  <SelectItem value="benzene">Benzene</SelectItem>
-                  <SelectItem value="toluene">Toluene</SelectItem>
-                  <SelectItem value="xylene">Xylene</SelectItem>
-                  <SelectItem value="dioxane">1,4-Dioxane</SelectItem>
-                  <SelectItem value="hexane">Hexane</SelectItem>
-                  <SelectItem value="heptane">Heptane</SelectItem>
-                  <SelectItem value="ether">Diethyl Ether</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Solutes */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Solutes (optional, SMILES)</Label>
-              <div className="flex items-center gap-2">
-                <Select onValueChange={(v) => addSoluteFromLibrary(v)}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Add from library" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMMON_SOLUTES.map((c) => (
-                      <SelectItem key={c.smiles} value={c.smiles}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm" onClick={addSolute}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Solute
-                </Button>
-              </div>
-            </div>
-            {solutes.length > 0 && (
-              <div className="space-y-2">
-                {solutes.map((val, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <Input
-                      placeholder="Enter solute SMILES"
-                      value={val}
-                      onChange={(e) => updateSolute(idx, e.target.value)}
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeSolute(idx)}
-                      title="Remove solute"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Conditions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <Label className="flex items-center gap-2">
-                <Thermometer className="h-4 w-4" />
-                Temperature: {conditions.temperature}K
-              </Label>
-              <Slider
-                value={[conditions.temperature]}
-                onValueChange={([value]) =>
-                  setConditions((prev) => ({ ...prev, temperature: value }))
-                }
-                min={273}
-                max={573}
-                step={1}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-4">
-              <Label>Pressure: {conditions.pressure} atm</Label>
-              <Slider
-                value={[conditions.pressure]}
-                onValueChange={([value]) =>
-                  setConditions((prev) => ({ ...prev, pressure: value }))
-                }
-                min={0.1}
-                max={10}
-                step={0.1}
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Add: estimated real-world reaction time */}
-          <div className="text-sm text-muted-foreground">
-            Estimated real-world completion time: <span className="font-medium">{estimateText}</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Molecular Visualization */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Reactants</h3>
-          {/* Show first as primary preview to keep layout compact */}
-          <MoleculeViewer smiles={reactants.filter(Boolean)[0] || "CCO"} height={220} captionMode="formula" />
-        </div>
-
-        <div className="flex items-center justify-center">
-          <motion.div
-            animate={{ x: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <ArrowRight className="h-8 w-8 text-primary" />
-          </motion.div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Products</h3>
-          {products.length > 0 ? (
-            <div className="space-y-3">
-              {/* Render all primary products */}
-              <div className="grid grid-cols-1 gap-3">
-                {products.map((p, i) => (
-                  <MoleculeViewer key={`prod-${i}-${p}`} smiles={p} height={220} />
-                ))}
-              </div>
-              {/* Add: Byproducts section */}
-              {byproducts.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Byproducts</h4>
-                  <div className="grid grid-cols-1 gap-3">
-                    {byproducts.map((b, i) => (
-                      <MoleculeViewer key={`byprod-${i}-${b}`} smiles={b} height={180} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Card className="p-8 h-[220px] flex items-center justify-center">
-              <p className="text-muted-foreground">Run simulation to see products</p>
-            </Card>
-          )}
-        </div>
-      </div>
-
-      {/* Additional 3D Views: Solvent & Solution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Solvent</h3>
-          <MoleculeViewer smiles={solventSmiles} height={220} />
-        </div>
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Solution</h3>
-          {products.length > 0 ? (
-            <MoleculeViewer
-              smiles={solutionSeedAfter}
-              height={220}
-            />
-          ) : (
-            <Card className="p-8 h-[220px] flex items-center justify-center">
-              <p className="text-muted-foreground">Run simulation to generate solution structure</p>
-            </Card>
-          )}
-        </div>
-      </div>
+      {/* Visualization extracted */}
+      <Visualization
+        primaryReactant={reactants.filter(Boolean)[0] || "CCO"}
+        products={products}
+        byproducts={byproducts}
+        solventSmiles={solventSmiles}
+        solutionSeedBefore={solutionSeedBefore}
+        solutionSeedAfter={solutionSeedAfter}
+      />
 
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
@@ -624,91 +401,12 @@ export function ReactionSimulator() {
         </Button>
       </div>
 
-      {/* Detailed Safety & Compliance + Applications */}
-      {products.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle>Safety, Environmental Impact & Applications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Percent metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { label: "Acute Toxicity", key: "tox" },
-                  { label: "Flammability", key: "flamm" },
-                  { label: "Reactivity", key: "react" },
-                  { label: "Environmental Hazard", key: "env" },
-                  { label: "Exposure Risk", key: "exp" },
-                  { label: "Corrosivity", key: "corr" },
-                ].map((m) => {
-                  const val = scoreFromSeed(
-                    products.join(".") + "|" + solventSmiles,
-                    m.key
-                  );
-                  return (
-                    <div key={m.key} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">{m.label}</span>
-                        <span className="text-muted-foreground">{val}%</span>
-                      </div>
-                      <Progress value={val} />
-                    </div>
-                  );
-                })}
-              </div>
-
-              <Separator />
-
-              {/* Regulatory snapshot */}
-              <div className="space-y-2">
-                <h4 className="font-medium">Regulatory Compliance Snapshot</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex justify-between">
-                    <span>FDA Status:</span>
-                    <span className="text-green-600 font-medium">
-                      {scoreFromSeed(products.join("."), "fda") > 50 ? "Permissible" : "Restricted"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>REACH:</span>
-                    <span className="text-green-600 font-medium">
-                      {scoreFromSeed(products.join("."), "reach") > 50 ? "Compliant" : "Review Needed"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>OSHA:</span>
-                    <span className="text-yellow-600 font-medium">
-                      {scoreFromSeed(products.join("."), "osha") > 50 ? "Precautions Required" : "Standard"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Applications */}
-              <div className="space-y-3">
-                <h4 className="font-medium">Potential Applications</h4>
-                <ul className="list-disc pl-6 text-sm space-y-1">
-                  <li>Solvent-based synthesis workflows and purification steps</li>
-                  <li>Process development and scale-up feasibility studies</li>
-                  <li>Analytical reference for QC/QA in manufacturing</li>
-                  <li>Intermediate for downstream functionalization</li>
-                  <li>Formulation trials for coatings or pharma excipients</li>
-                </ul>
-                <p className="text-xs text-muted-foreground">
-                  Note: Results are simulated and indicative. Validate with lab data prior to industrial deployment.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+      {/* Safety panel extracted */}
+      <SafetyPanel
+        products={products}
+        solventSmiles={solventSmiles}
+        scoreFromSeed={scoreFromSeed}
+      />
     </div>
   );
 }
