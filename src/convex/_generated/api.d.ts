@@ -15,6 +15,8 @@ import type {
 } from "convex/server";
 import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
+import type * as cheminfo from "../cheminfo.js";
+import type * as cheminfoMutations from "../cheminfoMutations.js";
 import type * as http from "../http.js";
 import type * as molecules from "../molecules.js";
 import type * as pubchem from "../pubchem.js";
@@ -32,6 +34,8 @@ import type * as users from "../users.js";
 declare const fullApi: ApiFromModules<{
   "auth/emailOtp": typeof auth_emailOtp;
   auth: typeof auth;
+  cheminfo: typeof cheminfo;
+  cheminfoMutations: typeof cheminfoMutations;
   http: typeof http;
   molecules: typeof molecules;
   pubchem: typeof pubchem;

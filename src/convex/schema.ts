@@ -86,6 +86,14 @@ const schema = defineSchema(
       status: v.string(), // "running", "completed", "failed"
     }).index("by_user", ["userId"])
       .index("by_reaction", ["reactionId"]),
+
+    // Add: store results from the external FastAPI Cheminformatics service
+    cheminfo_results: defineTable({
+      type: v.string(), // e.g., 'structure_validation', 'smiles_normalization', etc.
+      input: v.any(),   // input sent to FastAPI
+      result: v.any(),  // response from FastAPI
+      timestamp: v.number(),
+    }).index("by_type", ["type"]),
   },
   {
     schemaValidation: false,
