@@ -19,7 +19,8 @@ interface ReactionConditions {
 }
 
 const SOLVENT_SMILES: Record<string, string> = {
-  water: "O",
+  // Show explicit hydrogens for water so the viewer renders H–O–H
+  water: "[H]O[H]",
   ethanol: "CCO",
   methanol: "CO",
   isopropanol: "CC(O)C",
@@ -60,6 +61,32 @@ const COMMON_SOLUTES: Array<{ label: string; smiles: string }> = [
   { label: "Potassium Carbonate", smiles: "[K+].[K+].[O-]C(=O)[O-]" },
   { label: "Lithium Aluminum Hydride", smiles: "[Li+].[AlH4-]" },
 ];
+
+// Add: simple deterministic estimated time helper
+// This is a heuristic for display purposes only
+const estimateReactionTimeMinutes = (
+  reactantsCount: number,
+  solutesCount: number,
+  solventKey: string,
+  temperatureK: number,
+  pressureAtm: number,
+) => {
+  let base = 30 + reactantsCount * 20 + solutesCount * 10; // base minutes
+  // solvent influence (arbitrary weights)
+  const solventFactor: Record<string, number> = {
+    water: 1.0, ethanol: 0.9, methanol: 0.85, isopropanol: 0.95,
+    acetone: 0.8, acetonitrile: 0.75, dmso: 1.1, dmf: 1.15, thf: 0.9,
+    dichloromethane: 0.7, chloroform: 0.8, benzene: 1.05, toluene: 1.0,
+    xylene: 1.05, dioxane: 0.95, hexane: 1.1, heptane: 1.15, ether: 0.85,
+  };
+  base *= solventFactor[solventKey] ?? 1.0;
+  // temperature: hotter -> faster
+  const tempFactor = Math.max(0.4, 1.6 - (temperatureK - 273) / 300);
+  // pressure: higher (to a limit) -> slightly faster
+  const pressureFactor = Math.max(0.7, 1.2 - (pressureAtm - 1) * 0.05);
+  const minutes = Math.max(5, Math.round(base * tempFactor * pressureFactor));
+  return minutes;
+};
 
 export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
@@ -125,6 +152,18 @@ export function ReactionSimulator() {
     // map to 5..95 for nicer percentages
     return 5 + (h >>> 0) % 91;
   };
+
+  // Add: derive estimate text
+  const estimatedMinutes = estimateReactionTimeMinutes(
+    reactants.filter((r) => r.trim()).length,
+    solutes.filter((s) => s.trim()).length,
+    conditions.solvent,
+    conditions.temperature,
+    conditions.pressure,
+  );
+  const estimateText = estimatedMinutes >= 60
+    ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`
+    : `${estimatedMinutes} min`;
 
   const handleSimulate = async () => {
     const hasAtLeastOneReactant = reactants.some((r) => r.trim().length > 0);
@@ -328,6 +367,11 @@ export function ReactionSimulator() {
               />
             </div>
           </div>
+
+          {/* Add: estimated real-world reaction time */}
+          <div className="text-sm text-muted-foreground">
+            Estimated real-world completion time: <span className="font-medium">{estimateText}</span>
+          </div>
         </CardContent>
       </Card>
 
@@ -367,10 +411,16 @@ export function ReactionSimulator() {
         </div>
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Solution</h3>
-          <MoleculeViewer
-            smiles={products.length > 0 ? solutionSeedAfter : solutionSeedBefore}
-            height={220}
-          />
+          {products.length > 0 ? (
+            <MoleculeViewer
+              smiles={solutionSeedAfter}
+              height={220}
+            />
+          ) : (
+            <Card className="p-8 h-[220px] flex items-center justify-center">
+              <p className="text-muted-foreground">Run simulation to generate solution structure</p>
+            </Card>
+          )}
         </div>
       </div>
 
