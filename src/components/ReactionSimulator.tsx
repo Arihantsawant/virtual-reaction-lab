@@ -11,6 +11,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { MoleculeViewer } from "./MoleculeViewer";
 import { Progress } from "@/components/ui/progress";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 interface ReactionConditions {
   temperature: number;
@@ -99,6 +101,7 @@ export function ReactionSimulator() {
     solvent: "water",
   });
   const [isSimulating, setIsSimulating] = useState(false);
+  const resolveCompound = useAction(api.pubchem.resolveCompound);
 
   const sanitizeSmiles = (input: string) => {
     const allowed = /[A-Za-z0-9@\+\-\[\]\(\)=#\\\/\.\*:]/g;
@@ -132,6 +135,72 @@ export function ReactionSimulator() {
   const addSoluteFromLibrary = (smiles: string) => {
     setSolutes((s) => [...s, smiles]);
     toast.success("Solute added from library");
+  };
+
+  // Add: Validate via PubChem to correct to canonical SMILES and gather IUPAC names
+  const handleValidateViaPubChem = async () => {
+    try {
+      const reactantResults = await Promise.all(
+        reactants.map(async (r) => {
+          const q = r.trim();
+          if (!q) return { original: r };
+          // Try resolve by SMILES first, fallback to name if needed
+          const bySmiles = await resolveCompound({ query: q, namespace: "smiles" });
+          const res = bySmiles?.cid
+            ? bySmiles
+            : await resolveCompound({ query: q, namespace: "name" });
+          return {
+            original: r,
+            canonical: res?.canonicalSmiles || r,
+            iupac: res?.iupacName || null,
+          };
+        }),
+      );
+
+      const soluteResults = await Promise.all(
+        solutes.map(async (s) => {
+          const q = s.trim();
+          if (!q) return { original: s };
+          const bySmiles = await resolveCompound({ query: q, namespace: "smiles" });
+          const res = bySmiles?.cid
+            ? bySmiles
+            : await resolveCompound({ query: q, namespace: "name" });
+          return {
+            original: s,
+            canonical: res?.canonicalSmiles || s,
+            iupac: res?.iupacName || null,
+          };
+        }),
+      );
+
+      // Update canonical SMILES if PubChem returned it
+      const nextReactants = reactantResults.map((r) => r.canonical ?? r.original);
+      const nextSolutes = soluteResults.map((s) => s.canonical ?? s.original);
+      setReactants(nextReactants);
+      setSolutes(nextSolutes);
+
+      // Prepare a concise summary for toasts
+      const reactantNames = reactantResults
+        .map((r, i) => (r.iupac ? `R${i + 1}: ${r.iupac}` : null))
+        .filter(Boolean)
+        .join("; ");
+      const soluteNames = soluteResults
+        .map((s, i) => (s.iupac ? `S${i + 1}: ${s.iupac}` : null))
+        .filter(Boolean)
+        .join("; ");
+
+      if (reactantNames || soluteNames) {
+        toast.success(
+          `${reactantNames ? `Reactants → ${reactantNames}. ` : ""}${
+            soluteNames ? `Solutes → ${soluteNames}.` : ""
+          }`,
+        );
+      } else {
+        toast.success("Validated via PubChem (no changes needed).");
+      }
+    } catch (e) {
+      toast.error("Validation failed (PubChem). Please try again.");
+    }
   };
 
   // Derived SMILES for solvent and solution previews
@@ -465,10 +534,13 @@ export function ReactionSimulator() {
       </div>
 
       {/* Controls */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <Button onClick={handleSimulate} disabled={!canRun} className="flex-1">
           <Play className="mr-2 h-4 w-4" />
           {isSimulating ? "Simulating..." : "Run Simulation"}
+        </Button>
+        <Button variant="outline" onClick={handleValidateViaPubChem}>
+          Validate via PubChem
         </Button>
         <Button variant="outline" onClick={handleSaveReaction} disabled={products.length === 0}>
           <Save className="mr-2 h-4 w-4" />

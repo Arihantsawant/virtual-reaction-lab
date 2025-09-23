@@ -17,6 +17,7 @@ import type * as auth_emailOtp from "../auth/emailOtp.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as molecules from "../molecules.js";
+import type * as pubchem from "../pubchem.js";
 import type * as reactions from "../reactions.js";
 import type * as users from "../users.js";
 
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
   molecules: typeof molecules;
+  pubchem: typeof pubchem;
   reactions: typeof reactions;
   users: typeof users;
 }>;
