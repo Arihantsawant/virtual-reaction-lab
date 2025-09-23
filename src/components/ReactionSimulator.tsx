@@ -234,9 +234,7 @@ export function ReactionSimulator() {
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg.includes("FASTAPI_CHEM_BASE_URL")) {
-        toast.error(
-          "FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.",
-        );
+        toast.error("FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.");
       } else {
         toast.error("FastAPI validation failed.");
       }
@@ -268,9 +266,7 @@ export function ReactionSimulator() {
     } catch (e: any) {
       const msg = String(e?.message || e);
       if (msg.includes("FASTAPI_CHEM_BASE_URL")) {
-        toast.error(
-          "FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.",
-        );
+        toast.error("FastAPI backend not configured. Set FASTAPI_CHEM_BASE_URL in Integrations.");
       } else {
         toast.error("SMILES normalization failed (FastAPI).");
       }
