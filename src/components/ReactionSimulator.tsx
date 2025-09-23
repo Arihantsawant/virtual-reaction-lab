@@ -92,6 +92,7 @@ export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
   const [solutes, setSolutes] = useState<string[]>([]);
   const [products, setProducts] = useState<string[]>([]);
+  const [byproducts, setByproducts] = useState<string[]>([]);
   const [conditions, setConditions] = useState<ReactionConditions>({
     temperature: 298,
     pressure: 1,
@@ -172,6 +173,9 @@ export function ReactionSimulator() {
       return;
     }
     setIsSimulating(true);
+    // Reset previous outputs
+    setProducts([]);
+    setByproducts([]);
 
     await new Promise((resolve) => setTimeout(resolve, 1600));
 
@@ -181,7 +185,10 @@ export function ReactionSimulator() {
     const productA = reactants[0]?.includes("CCO") ? "CH3CHO" : "CCO";
     const productB = seedBase.includes("O") ? "H2O" : "CO2";
 
-    setProducts([productA, productB]);
+    // Treat primary vs. byproducts separately
+    setProducts([productA]);
+    setByproducts([productB]);
+
     setIsSimulating(false);
 
     toast.success("Reaction simulation completed!");
@@ -252,6 +259,20 @@ export function ReactionSimulator() {
                   </div>
                 ))}
               </div>
+
+              {/* Add: Live 3D previews for all non-empty reactants */}
+              {reactants.filter((r) => r.trim()).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Reactant Structures</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {reactants
+                      .filter((r) => r.trim())
+                      .map((r, i) => (
+                        <MoleculeViewer key={`${r}-${i}`} smiles={r} height={160} />
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -379,6 +400,7 @@ export function ReactionSimulator() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Reactants</h3>
+          {/* Show first as primary preview to keep layout compact */}
           <MoleculeViewer smiles={reactants.filter(Boolean)[0] || "CCO"} height={220} />
         </div>
 
@@ -394,7 +416,25 @@ export function ReactionSimulator() {
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Products</h3>
           {products.length > 0 ? (
-            <MoleculeViewer smiles={products[0]} height={220} />
+            <div className="space-y-3">
+              {/* Render all primary products */}
+              <div className="grid grid-cols-1 gap-3">
+                {products.map((p, i) => (
+                  <MoleculeViewer key={`prod-${i}-${p}`} smiles={p} height={220} />
+                ))}
+              </div>
+              {/* Add: Byproducts section */}
+              {byproducts.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Byproducts</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    {byproducts.map((b, i) => (
+                      <MoleculeViewer key={`byprod-${i}-${b}`} smiles={b} height={180} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <Card className="p-8 h-[220px] flex items-center justify-center">
               <p className="text-muted-foreground">Run simulation to see products</p>
