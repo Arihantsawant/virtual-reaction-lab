@@ -15,6 +15,9 @@ const API_KEY = process.env.FASTAPI_CHEM_API_KEY;
 
 // Helper to call the external FastAPI cheminformatics backend
 async function callFastApi<T>(ctx: any, endpoint: string, data: unknown): Promise<T> {
+  // Mark ctx as intentionally unused to satisfy strict TS settings
+  void ctx;
+
   if (!BASE_URL) {
     throw new Error("FASTAPI_CHEM_BASE_URL is not set. Configure it in Integrations > FastAPI Cheminformatics.");
   }

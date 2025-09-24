@@ -8,7 +8,6 @@ type VisualizationProps = {
   products: string[];
   byproducts: string[];
   solventSmiles: string;
-  solutionSeedBefore: string;
   solutionSeedAfter: string;
 };
 
@@ -17,7 +16,6 @@ export function Visualization({
   products,
   byproducts,
   solventSmiles,
-  solutionSeedBefore,
   solutionSeedAfter,
 }: VisualizationProps) {
   return (

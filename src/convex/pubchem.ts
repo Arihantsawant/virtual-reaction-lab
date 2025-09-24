@@ -24,6 +24,8 @@ export const resolveCompound = action({
     namespace: v.union(v.literal("name"), v.literal("smiles")),
   },
   handler: async (ctx, args) => {
+    // Mark ctx as intentionally unused to satisfy strict TS settings
+    void ctx;
     const { query, namespace } = args;
 
     // Step 1: get CID
@@ -81,6 +83,8 @@ export const getSynonyms = action({
     namespace: v.union(v.literal("name"), v.literal("smiles"), v.literal("cid")),
   },
   handler: async (ctx, { identifier, namespace }) => {
+    // Mark ctx as intentionally unused
+    void ctx;
     const url = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/synonyms/JSON`;
     try {
       const r = await fetch(url, { method: "GET", headers: { Accept: "application/json" } });
@@ -106,6 +110,8 @@ export const getImageUrl = action({
     imageSize: v.optional(v.string()), // e.g., "300x300"
   },
   handler: async (ctx, { identifier, namespace, recordType, imageSize }) => {
+    // Mark ctx as intentionally unused
+    void ctx;
     const base = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/PNG`;
     const params = new URLSearchParams();
     if (recordType) params.set("record_type", recordType);

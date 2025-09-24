@@ -322,7 +322,7 @@ export function ReactionSimulator() {
       ? `${products.join(".")}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`
       : solutionSeedBefore;
 
-  // scoreFromSeed imported from ./simulator/config
+  // scoreFromSeed now imported from ./simulator/config
 
   // Add: derive estimate text
   const estimatedMinutes = estimateReactionTimeMinutes(
