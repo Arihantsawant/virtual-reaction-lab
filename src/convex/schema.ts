@@ -95,9 +95,6 @@ const schema = defineSchema(
       timestamp: v.number(),
     }).index("by_type", ["type"]),
   },
-  {
-    schemaValidation: false,
-  },
 );
 
 export default schema;

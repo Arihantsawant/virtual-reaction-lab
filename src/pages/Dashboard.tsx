@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { motion } from "framer-motion";
-import { Beaker, FileText, History, LogOut, FlaskConical, Plus, Settings, User } from "lucide-react";
+import { Beaker, FileText, History, LogOut, FlaskConical, Plus, User } from "lucide-react";
 import { useNavigate } from "react-router";
 import { ReactionSimulator } from "@/components/ReactionSimulator";
 import { useEffect, useState } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
@@ -37,6 +38,18 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+  };
+
+  // Add: quick test button to validate FastAPI config
+  const testCheminfoConnection = async () => {
+    try {
+      await validateStructure({ structure: "C" });
+      toast.success("FastAPI Cheminformatics connected!");
+      setShowCheminfoWarning(false);
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      toast.error(msg.includes("FASTAPI_CHEM_BASE_URL") ? "FASTAPI_CHEM_BASE_URL is not set." : `Cheminfo error: ${msg}`);
+    }
   };
 
   return (
@@ -77,6 +90,11 @@ export default function Dashboard() {
               Set FASTAPI_CHEM_BASE_URL (and optional FASTAPI_CHEM_API_KEY) in Integrations to enable Cheminfo features.
               After saving, reload the app and use the "Cheminfo: Validate" and "Cheminfo: Normalize" buttons in the Simulator.
             </p>
+            <div className="mt-3">
+              <Button variant="outline" size="sm" onClick={testCheminfoConnection}>
+                Test Cheminfo Connection
+              </Button>
+            </div>
           </div>
         )}
         <motion.div
