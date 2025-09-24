@@ -26,6 +26,10 @@ export default function Landing() {
     }
   };
 
+  const handleWatchDemo = () => {
+    document.getElementById("demo")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -84,7 +88,7 @@ export default function Landing() {
                 {isAuthenticated ? "Go to Dashboard" : "Start Simulating"}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6" onClick={handleWatchDemo}>
                 Watch Demo
               </Button>
             </div>
@@ -170,7 +174,7 @@ export default function Landing() {
       </section>
 
       {/* Demo Section */}
-      <section className="py-32 px-6">
+      <section id="demo" className="py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
