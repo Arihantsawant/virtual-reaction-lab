@@ -16,50 +16,6 @@ import {
   type ReactionConditions,
 } from "@/components/simulator/config";
 
-const SOLVENT_SMILES: Record<string, string> = {
-  // Show explicit hydrogens for water so the viewer renders H–O–H
-  water: "[H]O[H]",
-  ethanol: "CCO",
-  methanol: "CO",
-  isopropanol: "CC(O)C",
-  acetone: "CC(C)=O",
-  acetonitrile: "CC#N",
-  dmso: "CS(=O)C",
-  dmf: "CN(C)C=O",
-  toluene: "Cc1ccccc1",
-  benzene: "c1ccccc1",
-  xylene: "Cc1cccc(C)c1",
-  dichloromethane: "ClCCl",
-  chloroform: "ClC(Cl)Cl",
-  ether: "CCOCC",
-  thf: "C1CCOC1",
-  hexane: "CCCCCC",
-  heptane: "CCCCCCC",
-  dioxane: "O1CCOCC1",
-};
-
-const COMMON_REACTANTS: Array<{ label: string; smiles: string }> = [
-  { label: "Ethanol", smiles: "CCO" },
-  { label: "Acetic Acid", smiles: "CC(=O)O" },
-  { label: "Acetaldehyde", smiles: "CC=O" },
-  { label: "Benzene", smiles: "c1ccccc1" },
-  { label: "Toluene", smiles: "Cc1ccccc1" },
-  { label: "Aniline", smiles: "Nc1ccccc1" },
-  { label: "Phenol", smiles: "Oc1ccccc1" },
-  { label: "Methane", smiles: "C" },
-  { label: "Propene", smiles: "C=CC" },
-  { label: "Chloroform", smiles: "ClC(Cl)Cl" },
-];
-
-const COMMON_SOLUTES: Array<{ label: string; smiles: string }> = [
-  { label: "Sodium Chloride", smiles: "[Na+].[Cl-]" },
-  { label: "Sodium Hydroxide", smiles: "[Na+].[OH-]" },
-  { label: "Hydrochloric Acid", smiles: "Cl" },
-  { label: "Sulfuric Acid", smiles: "O=S(=O)(O)O" },
-  { label: "Potassium Carbonate", smiles: "[K+].[K+].[O-]C(=O)[O-]" },
-  { label: "Lithium Aluminum Hydride", smiles: "[Li+].[AlH4-]" },
-];
-
 export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
   const [solutes, setSolutes] = useState<string[]>([]);
@@ -90,7 +46,9 @@ export function ReactionSimulator() {
 
   // Derived SMILES for solvent and solution previews
   const solventSmiles = CONFIG_SOLVENT_SMILES[conditions.solvent] ?? "O";
-  const solutionSeedBefore = `${reactants.filter(Boolean).join(".") || ""}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`;
+  const solutionSeedBefore = `${reactants.filter(Boolean).join(".") || ""}+${solventSmiles}${
+    solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""
+  }`;
   const solutionSeedAfter =
     products.length > 0
       ? `${products.join(".")}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`
@@ -104,9 +62,8 @@ export function ReactionSimulator() {
     conditions.temperature,
     conditions.pressure,
   );
-  const estimateText = estimatedMinutes >= 60
-    ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`
-    : `${estimatedMinutes} min`;
+  const estimateText =
+    estimatedMinutes >= 60 ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m` : `${estimatedMinutes} min`;
 
   // Add: Validate via PubChem to correct to canonical SMILES and gather IUPAC names
   const handleValidateViaPubChem = async () => {
