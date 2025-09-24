@@ -1,23 +1,11 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { motion } from "framer-motion";
-import { ArrowRight, Play, Save, Thermometer, Zap, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MoleculeViewer } from "./MoleculeViewer";
-import { Progress } from "@/components/ui/progress";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ReactionInputs } from "./simulator/ReactionInputs";
 import { ReactionVisualization } from "./simulator/ReactionVisualization";
 import { ReactionSafetyPanel } from "./simulator/ReactionSafetyPanel";
 import { ReactionControls } from "./simulator/ReactionControls";
-// Add: import shared simulator config
 import {
   SOLVENT_SMILES as CONFIG_SOLVENT_SMILES,
   COMMON_REACTANTS as CONFIG_COMMON_REACTANTS,
