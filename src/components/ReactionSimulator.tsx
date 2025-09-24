@@ -1,23 +1,129 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { motion } from "framer-motion";
+import { ArrowRight, Play, Save, Thermometer, Zap, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { MoleculeViewer } from "./MoleculeViewer";
+import { Progress } from "@/components/ui/progress";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ReactionInputs } from "./simulator/ReactionInputs";
 import { ReactionVisualization } from "./simulator/ReactionVisualization";
 import { ReactionSafetyPanel } from "./simulator/ReactionSafetyPanel";
 import { ReactionControls } from "./simulator/ReactionControls";
-import type { ReactionConditions } from "@/components/simulator/config";
+// Add: import shared simulator config
 import {
-  SOLVENT_SMILES,
-  COMMON_REACTANTS,
-  COMMON_SOLUTES,
-  SOLVENT_OPTIONS,
-  estimateReactionTimeMinutes,
+  SOLVENT_SMILES as CONFIG_SOLVENT_SMILES,
+  COMMON_REACTANTS as CONFIG_COMMON_REACTANTS,
+  COMMON_SOLUTES as CONFIG_COMMON_SOLUTES,
+  SOLVENT_OPTIONS as CONFIG_SOLVENT_OPTIONS,
+  estimateReactionTimeMinutes as estimateFromConfig,
+  scoreFromSeed as scoreFromConfig,
 } from "@/components/simulator/config";
 
- // removed duplicate local estimateReactionTimeMinutes; using imported helper from config
+interface ReactionConditions {
+  temperature: number;
+  pressure: number;
+  solvent: string;
+}
 
- // removed duplicate local SOLVENT_OPTIONS; using imported options from config
+const SOLVENT_SMILES: Record<string, string> = {
+  // Show explicit hydrogens for water so the viewer renders H–O–H
+  water: "[H]O[H]",
+  ethanol: "CCO",
+  methanol: "CO",
+  isopropanol: "CC(O)C",
+  acetone: "CC(C)=O",
+  acetonitrile: "CC#N",
+  dmso: "CS(=O)C",
+  dmf: "CN(C)C=O",
+  toluene: "Cc1ccccc1",
+  benzene: "c1ccccc1",
+  xylene: "Cc1cccc(C)c1",
+  dichloromethane: "ClCCl",
+  chloroform: "ClC(Cl)Cl",
+  ether: "CCOCC",
+  thf: "C1CCOC1",
+  hexane: "CCCCCC",
+  heptane: "CCCCCCC",
+  dioxane: "O1CCOCC1",
+};
+
+const COMMON_REACTANTS: Array<{ label: string; smiles: string }> = [
+  { label: "Ethanol", smiles: "CCO" },
+  { label: "Acetic Acid", smiles: "CC(=O)O" },
+  { label: "Acetaldehyde", smiles: "CC=O" },
+  { label: "Benzene", smiles: "c1ccccc1" },
+  { label: "Toluene", smiles: "Cc1ccccc1" },
+  { label: "Aniline", smiles: "Nc1ccccc1" },
+  { label: "Phenol", smiles: "Oc1ccccc1" },
+  { label: "Methane", smiles: "C" },
+  { label: "Propene", smiles: "C=CC" },
+  { label: "Chloroform", smiles: "ClC(Cl)Cl" },
+];
+
+const COMMON_SOLUTES: Array<{ label: string; smiles: string }> = [
+  { label: "Sodium Chloride", smiles: "[Na+].[Cl-]" },
+  { label: "Sodium Hydroxide", smiles: "[Na+].[OH-]" },
+  { label: "Hydrochloric Acid", smiles: "Cl" },
+  { label: "Sulfuric Acid", smiles: "O=S(=O)(O)O" },
+  { label: "Potassium Carbonate", smiles: "[K+].[K+].[O-]C(=O)[O-]" },
+  { label: "Lithium Aluminum Hydride", smiles: "[Li+].[AlH4-]" },
+];
+
+// Add: simple deterministic estimated time helper
+// This is a heuristic for display purposes only
+const estimateReactionTimeMinutes = (
+  reactantsCount: number,
+  solutesCount: number,
+  solventKey: string,
+  temperatureK: number,
+  pressureAtm: number,
+) => {
+  let base = 30 + reactantsCount * 20 + solutesCount * 10; // base minutes
+  // solvent influence (arbitrary weights)
+  const solventFactor: Record<string, number> = {
+    water: 1.0, ethanol: 0.9, methanol: 0.85, isopropanol: 0.95,
+    acetone: 0.8, acetonitrile: 0.75, dmso: 1.1, dmf: 1.15, thf: 0.9,
+    dichloromethane: 0.7, chloroform: 0.8, benzene: 1.05, toluene: 1.0,
+    xylene: 1.05, dioxane: 0.95, hexane: 1.1, heptane: 1.15, ether: 0.85,
+  };
+  base *= solventFactor[solventKey] ?? 1.0;
+  // temperature: hotter -> faster
+  const tempFactor = Math.max(0.4, 1.6 - (temperatureK - 273) / 300);
+  // pressure: higher (to a limit) -> slightly faster
+  const pressureFactor = Math.max(0.7, 1.2 - (pressureAtm - 1) * 0.05);
+  const minutes = Math.max(5, Math.round(base * tempFactor * pressureFactor));
+  return minutes;
+};
+
+// Add: Solvent options for the Select (labels kept identical to previous UI)
+const SOLVENT_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: "water", label: "Water" },
+  { key: "ethanol", label: "Ethanol" },
+  { key: "methanol", label: "Methanol" },
+  { key: "isopropanol", label: "Isopropanol" },
+  { key: "acetone", label: "Acetone" },
+  { key: "acetonitrile", label: "Acetonitrile" },
+  { key: "dmso", label: "DMSO" },
+  { key: "dmf", label: "DMF" },
+  { key: "thf", label: "THF" },
+  { key: "dichloromethane", label: "DCM (CH2Cl2)" },
+  { key: "chloroform", label: "Chloroform" },
+  { key: "benzene", label: "Benzene" },
+  { key: "toluene", label: "Toluene" },
+  { key: "xylene", label: "Xylene" },
+  { key: "dioxane", label: "1,4-Dioxane" },
+  { key: "hexane", label: "Hexane" },
+  { key: "heptane", label: "Heptane" },
+  { key: "ether", label: "Diethyl Ether" },
+];
 
 /* moved into component
 const resolveCompound = useAction(api.pubchem.resolveCompound);
@@ -193,7 +299,7 @@ const handleNormalizeViaCheminfo = async () => {
 };
 
 // Derived SMILES for solvent and solution previews
-const solventSmiles = SOLVENT_SMILES[conditions.solvent] ?? "O";
+const solventSmiles = CONFIG_SOLVENT_SMILES[conditions.solvent] ?? "O";
 const solutionSeedBefore = `${reactants.filter(Boolean).join(".") || ""}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`;
 const solutionSeedAfter =
   products.length > 0
@@ -212,8 +318,8 @@ const scoreFromSeed = (seed: string, salt: string) => {
   return 5 + (h >>> 0) % 91;
 };
 
-// Add: derive estimate text
-const estimatedMinutes = estimateReactionTimeMinutes(
+// Add: derive estimate text using shared helper
+const estimatedMinutes = estimateFromConfig(
   reactants.filter((r) => r.trim()).length,
   solutes.filter((s) => s.trim()).length,
   conditions.solvent,
@@ -261,8 +367,8 @@ const handleSaveReaction = () => {
 };
 
 const canRun = reactants.some((r) => r.trim().length > 0) && !isSimulating;
-
 */
+
 export function ReactionSimulator() {
   const [reactants, setReactants] = useState<string[]>(["CCO"]);
   const [solutes, setSolutes] = useState<string[]>([]);
@@ -292,7 +398,7 @@ export function ReactionSimulator() {
   };
 
   // Derived SMILES for solvent and solution previews
-  const solventSmiles = SOLVENT_SMILES[conditions.solvent] ?? "O";
+  const solventSmiles = CONFIG_SOLVENT_SMILES[conditions.solvent] ?? "O";
   const solutionSeedBefore = `${reactants.filter(Boolean).join(".") || ""}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`;
   const solutionSeedAfter =
     products.length > 0
@@ -311,8 +417,8 @@ export function ReactionSimulator() {
     return 5 + (h >>> 0) % 91;
   };
 
-  // Add: derive estimate text
-  const estimatedMinutes = estimateReactionTimeMinutes(
+  // Add: derive estimate text using shared helper
+  const estimatedMinutes = estimateFromConfig(
     reactants.filter((r) => r.trim()).length,
     solutes.filter((s) => s.trim()).length,
     conditions.solvent,
@@ -502,9 +608,9 @@ export function ReactionSimulator() {
         setSolutes={setSolutes}
         conditions={conditions}
         setConditions={(updater) => setConditions(updater)}
-        commonReactants={COMMON_REACTANTS}
-        commonSolutes={COMMON_SOLUTES}
-        solventOptions={SOLVENT_OPTIONS}
+        commonReactants={CONFIG_COMMON_REACTANTS}
+        commonSolutes={CONFIG_COMMON_SOLUTES}
+        solventOptions={CONFIG_SOLVENT_OPTIONS}
         estimatedText={estimateText}
         addReactantFromLibrary={addReactantFromLibrary}
         addSoluteFromLibrary={addSoluteFromLibrary}
@@ -535,7 +641,7 @@ export function ReactionSimulator() {
       <ReactionSafetyPanel
         products={products}
         solventSmiles={solventSmiles}
-        scoreFromSeed={scoreFromSeed}
+        scoreFromSeed={scoreFromConfig}
       />
     </div>
   );
