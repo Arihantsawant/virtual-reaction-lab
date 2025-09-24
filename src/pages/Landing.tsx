@@ -15,7 +15,7 @@ import {
 import { useNavigate } from "react-router";
 
 export default function Landing() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
