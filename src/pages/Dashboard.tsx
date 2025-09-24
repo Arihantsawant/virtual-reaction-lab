@@ -7,7 +7,7 @@ import { Beaker, FileText, History, LogOut, FlaskConical, Plus, User } from "luc
 import { useNavigate } from "react-router";
 import { ReactionSimulator } from "@/components/ReactionSimulator";
 import { useEffect, useState } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const validateStructure = useAction(api.cheminfo.validateStructure);
   const [showCheminfoWarning, setShowCheminfoWarning] = useState(false);
+  const molecules = useQuery(api.molecules.getUserMolecules) ?? [];
 
   useEffect(() => {
     let mounted = true;
@@ -150,33 +151,52 @@ export default function Dashboard() {
                     Add Molecule
                   </Button>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[1, 2, 3].map((i) => (
-                    <Card key={i} className="cursor-pointer hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Ethanol</CardTitle>
-                        <CardDescription>C₂H₆O</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Molecular Weight:</span>
-                            <span>46.07 g/mol</span>
+
+                {/* Render user molecules */}
+                {molecules.length === 0 ? (
+                  <Card className="p-6">
+                    <div className="text-sm text-muted-foreground">
+                      No molecules yet. Use "Add Molecule" or save from the simulator.
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {molecules.map((m) => (
+                      <Card key={m._id} className="cursor-pointer hover:shadow-md transition-shadow">
+                        <CardHeader>
+                          <CardTitle className="text-lg">{m.name}</CardTitle>
+                          <CardDescription>{m.formula}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2 text-sm">
+                            {m.properties?.molecularWeight !== undefined && (
+                              <div className="flex justify-between">
+                                <span>Molecular Weight:</span>
+                                <span>{m.properties.molecularWeight} g/mol</span>
+                              </div>
+                            )}
+                            {m.properties?.toxicity && (
+                              <div className="flex justify-between">
+                                <span>Toxicity:</span>
+                                <span className="text-green-600">{m.properties.toxicity}</span>
+                              </div>
+                            )}
+                            {m.properties?.hazardLevel && (
+                              <div className="flex justify-between">
+                                <span>Hazard:</span>
+                                <span className="text-yellow-700">{m.properties.hazardLevel}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span>SMILES:</span>
+                              <span className="font-mono truncate max-w-[10rem]" title={m.smiles}>{m.smiles}</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Toxicity:</span>
-                            <span className="text-green-600">Low</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>SMILES:</span>
-                            <span className="font-mono">CCO</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
 
