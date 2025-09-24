@@ -223,6 +223,18 @@ const solutionSeedAfter =
     ? `${products.join(".")}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`
     : solutionSeedBefore;
 
+// deterministic pseudo-scores from a seed string
+const scoreFromSeed = (seed: string, salt: string) => {
+  let h = 2166136261 >>> 0;
+  const s = seed + "|" + salt;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // map to 5..95 for nicer percentages
+  return 5 + (h >>> 0) % 91;
+};
+
 // Add: derive estimate text
 const estimatedMinutes = estimateReactionTimeMinutes(
   reactants.filter((r) => r.trim()).length,
