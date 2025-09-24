@@ -1,46 +1,23 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { motion } from "framer-motion";
-import { ArrowRight, Play, Save, Thermometer, Zap, Plus, Minus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { MoleculeViewer } from "./MoleculeViewer";
-import { Progress } from "@/components/ui/progress";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ReactionInputs } from "./simulator/ReactionInputs";
 import { ReactionVisualization } from "./simulator/ReactionVisualization";
 import { ReactionSafetyPanel } from "./simulator/ReactionSafetyPanel";
 import { ReactionControls } from "./simulator/ReactionControls";
+import type { ReactionConditions } from "@/components/simulator/config";
 import {
   SOLVENT_SMILES,
-  SOLVENT_OPTIONS,
   COMMON_REACTANTS,
   COMMON_SOLUTES,
+  SOLVENT_OPTIONS,
   estimateReactionTimeMinutes,
-  scoreFromSeed,
-  type ReactionConditions,
-} from "./simulator/config";
+} from "@/components/simulator/config";
 
-/* ReactionConditions type moved to ./simulator/config */
+ // removed duplicate local estimateReactionTimeMinutes; using imported helper from config
 
-/* SOLVENT_SMILES moved to ./simulator/config */
-
-/* COMMON_REACTANTS moved to ./simulator/config */
-
-/* COMMON_SOLUTES moved to ./simulator/config */
-
-// Add: simple deterministic estimated time helper
-// This is a heuristic for display purposes only
-/* estimateReactionTimeMinutes moved to ./simulator/config */
-
-// Add: Solvent options for the Select (labels kept identical to previous UI)
-/* SOLVENT_OPTIONS moved to ./simulator/config */
+ // removed duplicate local SOLVENT_OPTIONS; using imported options from config
 
 /* moved into component
 const resolveCompound = useAction(api.pubchem.resolveCompound);
@@ -322,7 +299,17 @@ export function ReactionSimulator() {
       ? `${products.join(".")}+${solventSmiles}${solutes.length ? "+" + solutes.filter(Boolean).join(".") : ""}`
       : solutionSeedBefore;
 
-  // scoreFromSeed now imported from ./simulator/config
+  // deterministic pseudo-scores from a seed string
+  const scoreFromSeed = (seed: string, salt: string) => {
+    let h = 2166136261 >>> 0;
+    const s = seed + "|" + salt;
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    // map to 5..95 for nicer percentages
+    return 5 + (h >>> 0) % 91;
+  };
 
   // Add: derive estimate text
   const estimatedMinutes = estimateReactionTimeMinutes(
