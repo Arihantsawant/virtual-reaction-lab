@@ -121,3 +121,20 @@ export const getImageUrl = action({
     return url;
   },
 });
+
+// Add test hook: deterministic URL builder mirroring getImageUrl logic
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const __test = {
+  buildImageUrl(
+    identifier: string,
+    namespace: "name" | "smiles" | "cid",
+    recordType?: "2d" | "3d",
+    imageSize?: string,
+  ) {
+    const base = `${PUBCHEM_BASE}/compound/${namespace}/${encodeURIComponent(identifier)}/PNG`;
+    const params = new URLSearchParams();
+    if (recordType) params.set("record_type", recordType);
+    if (imageSize) params.set("image_size", imageSize);
+    return params.toString() ? `${base}?${params.toString()}` : base;
+  },
+};

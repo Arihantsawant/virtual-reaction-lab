@@ -106,3 +106,9 @@ export const processAndSaveStructure = action({
     return result;
   },
 });
+
+// Add test hook export at the end for unit testing the HTTP wrapper
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export const __test = {
+  callFastApi,
+};
