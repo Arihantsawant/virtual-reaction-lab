@@ -1,0 +1,17 @@
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    try {
+      // quick ping to detect missing FASTAPI env setup
+      await validateStructure({ structure: "C" });
+    } catch (e: any) {
+      const msg = String(e?.message || e);
+      if (mounted && msg.includes("FASTAPI_CHEM_BASE_URL")) {
+        setShowCheminfoWarning(true);
+      }
+    }
+  })();
+  return () => {
+    mounted = false;
+  };
+}, [validateStructure]);
